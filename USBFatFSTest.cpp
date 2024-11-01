@@ -89,7 +89,7 @@ int main(void)
             if(fres == FR_OK)
             {
                 /** Read Test only if Write passed */
-                fres = f_open(&file, test_fname, (FA_OPEN_EXISTING | FA_READ);
+                fres = f_open(&file, test_fname, (FA_OPEN_EXISTING | FA_READ));
                 if(fres == FR_OK)
                 {
                     UINT   br = 0;
