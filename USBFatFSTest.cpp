@@ -1,12 +1,12 @@
 #include "daisy_patch_sm.h"
-#include "daisysp.h"
+#include "daisy_patchsm_usb.h"
 #include "fatfs.h"
 
 using namespace daisy;
 using namespace patch_sm;
-using namespace daisysp;
 
-DaisyPatchSM   hw;
+
+DaisyPatchSM_USB   hw;
 FIL            file; /**< Can't be made on the stack (DTCMRAM) */
 FatFSInterface fsi;
 FRESULT fileResult;
@@ -19,9 +19,6 @@ bool isUsbConnected = false;
 bool isUsbConfigured = false;
 bool wasConfigLoadAttempted = false;
 bool isConfigChanged = false;
-
-daisy::USBHostHandle usb;
-daisy::FatFSInterface fatfs_interface;
 
 void AudioCallback(AudioHandle::InputBuffer  in,
                    AudioHandle::OutputBuffer out,
@@ -51,32 +48,8 @@ void USBClassActiveCallback(void* userdata) {
 	isUsbConfigured = true;
 }
 
-/** @brief starts the mounting process for USB Drive use if it is present
- *  --FROM AURORA SDK--
- */
-void PrepareMedia(
-    daisy::USBHostHandle::ConnectCallback     connect_cb      = nullptr,
-    daisy::USBHostHandle::DisconnectCallback  disconnect_cb   = nullptr,
-    daisy::USBHostHandle::ClassActiveCallback class_active_cb = nullptr,
-    daisy::USBHostHandle::ErrorCallback       error_cb        = nullptr,
-    void                                     *userdata        = nullptr)
-{
-    /** Initialize hardware and set user callbacks */
-    daisy::USBHostHandle::Config usbcfg;
-    usbcfg.connect_callback      = connect_cb;
-    usbcfg.disconnect_callback   = disconnect_cb;
-    usbcfg.class_active_callback = class_active_cb;
-    usbcfg.error_callback        = error_cb;
-    usbcfg.userdata              = userdata;
-    usb.Init(usbcfg);
-
-    /** Prepare FatFS -- fmount will defer until first attempt to read/write */
-    daisy::FatFSInterface::Config fsi_cfg;
-    fsi_cfg.media = daisy::FatFSInterface::Config::MEDIA_USB;
-    fatfs_interface.Init(fsi_cfg);
-    f_mount(&fatfs_interface.GetUSBFileSystem(),
-            fatfs_interface.GetUSBPath(),
-            0);
+void USBErrorCallback(void* userdata) {
+    hw.PrintLine("USB Error");
 }
 
 int main(void)
@@ -86,22 +59,23 @@ int main(void)
     hw.PrintLine("Daisy Patch SM started. Test Beginning");
 
     /* SET UP USB*/
-    const char* usbPath = fatfs_interface.GetUSBPath();
+    const char* usbPath = hw.fatfs_interface.GetUSBPath();
     snprintf(testFilePath, IO_BUFFER_SIZE, "%s%s", usbPath, TEST_FILE_NAME);
-    PrepareMedia(USBConnectCallback, USBDisconnectCallback, USBClassActiveCallback);
+
+    hw.PrepareMedia(USBConnectCallback, USBDisconnectCallback, USBClassActiveCallback, USBErrorCallback);
 
     /** Write/Read text file */
     const char *test_string = "Testing Daisy Patch SM";
     const char *test_fname  = "DaisyPatchSM-USBTest.txt";
 
-    uint32_t now, dact, usbt, gatet;
-    now = dact = usbt = System::GetNow();
+    uint32_t now;
+    now = System::GetNow();
 
     while(1)
     {
         now = System::GetNow();
 
-        usb.Process();
+        hw.usbHost.Process();
 
         if ((now%5000)==0) {
 
