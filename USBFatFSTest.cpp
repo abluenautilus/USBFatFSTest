@@ -14,6 +14,7 @@ FRESULT fileResult;
 #define IO_BUFFER_SIZE 100
 #define TEST_FILE_NAME "USB_Test.txt"
 char testFilePath[IO_BUFFER_SIZE];
+
 bool isUsbConnected = false;
 bool isUsbConfigured = false;
 bool wasConfigLoadAttempted = false;
@@ -35,25 +36,27 @@ void AudioCallback(AudioHandle::InputBuffer  in,
 
 /* USB Host callbacks */
 void USBConnectCallback(void* userdata) {
-	isUsbConnected = true;
+    isUsbConnected = true;
     hw.PrintLine("USB Connected");
-    hw.usbHost.RegisterClass(USBH_MSC_CLASS);
+    hw.usbHost.RegisterClass(USBH_MSC_CLASS); // The class must be registered! 
 }
 void USBDisconnectCallback(void* userdata) {
-	isUsbConnected = false;
-	isUsbConfigured = false;
+    isUsbConnected = false;
+    isUsbConfigured = false;
     hw.PrintLine("USB Disconnected");
     hw.usbHost.GetReady();
 }
 void USBClassActiveCallback(void* userdata) {
     hw.PrintLine("USB class active");
     hw.usbHost.GetReady();
-	isUsbConfigured = true;
+    isUsbConfigured = true;
 }
 void USBErrorCallback(void* userdata) {
     hw.PrintLine("USB Error");
 }
 
+
+/* This is our read/write test, triggered now by a button press*/
 void writeTest() {
 
     hw.usbHost.Process();
@@ -65,10 +68,11 @@ void writeTest() {
     const char* usbPath = hw.fatfs_interface.GetUSBPath();
     snprintf(testFilePath, IO_BUFFER_SIZE, "%s%s", usbPath, TEST_FILE_NAME);
 
-    /** Write Test */
+    /** Give some feedback on whether the drive is ready before we attempt */
     int ready = hw.usbHost.GetReady();
     hw.PrintLine("Application state: %d",ready);
     
+    /** Write Test */
     fres = f_open(&file, testFilePath, (FA_CREATE_ALWAYS | FA_WRITE));
     if(fres == FR_OK)
     {
@@ -107,6 +111,7 @@ int main(void)
     hw.StartLog(true);
     hw.PrintLine("Daisy Patch SM started. Test Beginning");
 
+    /* We'll trigger the test with a button connected to B7 */
     button.Init(DaisyPatchSM::B7, hw.AudioCallbackRate());
 
     /* SET UP USB*/
