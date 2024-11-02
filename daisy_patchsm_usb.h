@@ -34,5 +34,6 @@ class DaisyPatchSM_USB: public DaisyPatchSM {
                 f_mount(&fatfs_interface.GetUSBFileSystem(),
                         fatfs_interface.GetUSBPath(),
                         0);
+
             }
 };

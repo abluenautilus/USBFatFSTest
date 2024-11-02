@@ -1,6 +1,7 @@
 #include "daisy_patch_sm.h"
 #include "daisy_patchsm_usb.h"
 #include "fatfs.h"
+#include "usbh_msc.h"
 
 using namespace daisy;
 using namespace patch_sm;
@@ -18,6 +19,8 @@ bool isUsbConfigured = false;
 bool wasConfigLoadAttempted = false;
 bool isConfigChanged = false;
 
+Switch  button;
+
 void AudioCallback(AudioHandle::InputBuffer  in,
                    AudioHandle::OutputBuffer out,
                    size_t                    size)
@@ -34,17 +37,68 @@ void AudioCallback(AudioHandle::InputBuffer  in,
 void USBConnectCallback(void* userdata) {
 	isUsbConnected = true;
     hw.PrintLine("USB Connected");
+    hw.usbHost.RegisterClass(USBH_MSC_CLASS);
 }
 void USBDisconnectCallback(void* userdata) {
 	isUsbConnected = false;
 	isUsbConfigured = false;
     hw.PrintLine("USB Disconnected");
+    hw.usbHost.GetReady();
 }
 void USBClassActiveCallback(void* userdata) {
+    hw.PrintLine("USB class active");
+    hw.usbHost.GetReady();
 	isUsbConfigured = true;
 }
 void USBErrorCallback(void* userdata) {
     hw.PrintLine("USB Error");
+}
+
+void writeTest() {
+
+    hw.usbHost.Process();
+
+    FRESULT fres = FR_DENIED; 
+
+    /** Strings for write/read to text file */
+    const char *test_string = "Testing Daisy Patch SM";
+    const char* usbPath = hw.fatfs_interface.GetUSBPath();
+    snprintf(testFilePath, IO_BUFFER_SIZE, "%s%s", usbPath, TEST_FILE_NAME);
+
+    /** Write Test */
+    int ready = hw.usbHost.GetReady();
+    hw.PrintLine("Application state: %d",ready);
+    
+    fres = f_open(&file, testFilePath, (FA_CREATE_ALWAYS | FA_WRITE));
+    if(fres == FR_OK)
+    {
+        UINT   bw  = 0;
+        size_t len = strlen(test_string);
+        fres       = f_write(&file, test_string, len, &bw);
+        hw.PrintLine("WRITE OK!");
+    } else {
+        hw.PrintLine("Write test f_open failed with code: %d",fres);
+    }
+    f_close(&file);
+    if(fres == FR_OK)
+    {
+        /** Read Test only if Write passed */
+        fres = f_open(&file, testFilePath, (FA_OPEN_EXISTING | FA_READ));
+        if(fres == FR_OK)
+        {
+            UINT   br = 0;
+            char   readbuff[32];
+            size_t len = strlen(test_string);
+            fres       = f_read(&file, readbuff, len, &br);
+            hw.PrintLine("READ OK!");
+        } else {
+            hw.PrintLine("Read test f_open failed with code: %d",fres);
+        }
+        f_close(&file);
+    }
+
+    bool usb_pass = fres == FR_OK;
+    hw.PrintLine("USB Test\t-\t%s", usb_pass ? "PASS" : "FAIL");
 }
 
 int main(void)
@@ -53,62 +107,30 @@ int main(void)
     hw.StartLog(true);
     hw.PrintLine("Daisy Patch SM started. Test Beginning");
 
-    /* SET UP USB*/
-    const char* usbPath = hw.fatfs_interface.GetUSBPath();
-    snprintf(testFilePath, IO_BUFFER_SIZE, "%s%s", usbPath, TEST_FILE_NAME);
-    hw.PrepareMedia(USBConnectCallback, USBDisconnectCallback, USBClassActiveCallback, USBErrorCallback);
+    button.Init(DaisyPatchSM::B7, hw.AudioCallbackRate());
 
-    /** Strings for write/read to text file */
-    const char *test_string = "Testing Daisy Patch SM";
-    const char *test_fname  = "DaisyPatchSM-USBTest.txt";
+    /* SET UP USB*/
+    hw.PrepareMedia(USBConnectCallback, USBDisconnectCallback, USBClassActiveCallback, USBErrorCallback);
 
     uint32_t now;
     now = System::GetNow();
 
+    hw.usbHost.Process();
+    bool ready = hw.usbHost.GetReady();
+    hw.PrintLine("Is ready: %d",ready);
+
     while(1)
     {
         now = System::GetNow();
+        hw.SetLed((now & 2047) > 60);
 
         hw.usbHost.Process();
+        button.Debounce();
 
-        if ((now%5000)==0) {
-
-            FRESULT fres = FR_DENIED; 
-         
-            /** Write Test */
-            fres = f_open(&file, testFilePath, (FA_CREATE_ALWAYS | FA_WRITE));
-            if(fres == FR_OK)
-            {
-                UINT   bw  = 0;
-                size_t len = strlen(test_string);
-                fres       = f_write(&file, test_string, len, &bw);
-            } else {
-                hw.PrintLine("Write test f_open failed with code: %d",fres);
-            }
-            f_close(&file);
-            if(fres == FR_OK)
-            {
-                /** Read Test only if Write passed */
-                fres = f_open(&file, test_fname, (FA_OPEN_EXISTING | FA_READ));
-                if(fres == FR_OK)
-                {
-                    UINT   br = 0;
-                    char   readbuff[32];
-                    size_t len = strlen(test_string);
-                    fres       = f_read(&file, readbuff, len, &br);
-                } else {
-                    hw.PrintLine("Read test f_open failed with code: %d",fres);
-                }
-                f_close(&file);
-            }
-        
-            bool usb_pass = fres == FR_OK;
-            hw.PrintLine("USB Test\t-\t%s", usb_pass ? "PASS" : "FAIL");
-
-            System::Delay(50);
+        if (button.RisingEdge()) {
+            writeTest();
+            System::Delay(100);
         }
-
-        /** short 60ms blip off on builtin LED */
-        hw.SetLed((now & 2047) > 60);
+        
     }
 }
