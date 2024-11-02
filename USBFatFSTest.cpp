@@ -6,9 +6,11 @@
 using namespace daisy;
 using namespace patch_sm;
 
+#define DSY_FFS_LOC __attribute__((section(".sram1_bss")))
+
 DaisyPatchSM_USB   hw;
-FIL            file; /**< Can't be made on the stack (DTCMRAM) */
-FatFSInterface fsi;
+FIL DSY_FFS_LOC file; /**< Can't be made on the stack (DTCMRAM) */
+FatFSInterface DSY_FFS_LOC fsi;
 FRESULT fileResult;
 
 #define IO_BUFFER_SIZE 100
@@ -70,7 +72,7 @@ void writeTest() {
 
     /** Give some feedback on whether the drive is ready before we attempt */
     int ready = hw.usbHost.GetReady();
-    hw.PrintLine("Application state: %d",ready);
+    hw.PrintLine("Application ready: %d",ready);
     
     /** Write Test */
     fres = f_open(&file, testFilePath, (FA_CREATE_ALWAYS | FA_WRITE));
@@ -123,6 +125,12 @@ int main(void)
     hw.usbHost.Process();
     bool ready = hw.usbHost.GetReady();
     hw.PrintLine("Is ready: %d",ready);
+
+    /** Prepare FatFS -- fmount will defer until first attempt to read/write */
+    daisy::FatFSInterface::Config fsi_cfg;
+    fsi_cfg.media = daisy::FatFSInterface::Config::MEDIA_USB;
+    fsi.Init(fsi_cfg);
+    f_mount(&fsi.GetUSBFileSystem(),fsi.GetUSBPath(), 0);
 
     while(1)
     {

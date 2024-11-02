@@ -15,7 +15,6 @@ class DaisyPatchSM_USB: public DaisyPatchSM {
 
     public:
         daisy::USBHostHandle usbHost;
-        daisy::FatFSInterface fatfs_interface;
 
         void PrepareMedia(
             daisy::USBHostHandle::ConnectCallback     connect_cb      = nullptr,
@@ -32,14 +31,6 @@ class DaisyPatchSM_USB: public DaisyPatchSM {
                 usbcfg.error_callback        = error_cb;
                 usbcfg.userdata              = userdata;
                 usbHost.Init(usbcfg);
-
-                /** Prepare FatFS -- fmount will defer until first attempt to read/write */
-                daisy::FatFSInterface::Config fsi_cfg;
-                fsi_cfg.media = daisy::FatFSInterface::Config::MEDIA_USB;
-                fatfs_interface.Init(fsi_cfg);
-                f_mount(&fatfs_interface.GetUSBFileSystem(),
-                        fatfs_interface.GetUSBPath(),
-                        0);
 
             }
 };

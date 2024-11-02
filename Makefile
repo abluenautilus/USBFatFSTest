@@ -4,9 +4,9 @@ TARGET = USBFatFSTest
 # Sources
 CPP_SOURCES = USBFatFSTest.cpp
 
-APP_TYPE = BOOT_QSPI
+#APP_TYPE = BOOT_QSPI
 #APP_TYPE = BOOT_NONE
-#APP_TYPE = BOOT_SRAM # Does not work
+APP_TYPE = BOOT_SRAM
 
 # Required to use FatFs File System
 USE_FATFS = 1
