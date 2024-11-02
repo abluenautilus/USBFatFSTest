@@ -67,7 +67,7 @@ void writeTest() {
 
     /** Strings for write/read to text file */
     const char *test_string = "Testing Daisy Patch SM";
-    const char* usbPath = hw.fatfs_interface.GetUSBPath();
+    const char* usbPath = fsi.GetUSBPath();
     snprintf(testFilePath, IO_BUFFER_SIZE, "%s%s", usbPath, TEST_FILE_NAME);
 
     /** Give some feedback on whether the drive is ready before we attempt */
