@@ -12,8 +12,8 @@ APP_TYPE = BOOT_QSPI
 USE_FATFS = 1
 
 # Library Locations
-LIBDAISY_DIR = /Users/jonask/Music/Daisy/libDaisy
-DAISYSP_DIR = /Users/jonask/Music/Daisy/DaisySP
+LIBDAISY_DIR = ${HOME}/Music/Daisy/libDaisy
+DAISYSP_DIR = ${HOME}/Music/Daisy/DaisySP
 
 # Linker flags
 LDFLAGS = -u _printf_float
