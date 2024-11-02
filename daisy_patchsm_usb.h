@@ -2,6 +2,12 @@
 #include "daisy_patch_sm.h"
 #include "fatfs.h"
 
+/*
+
+    Extension of DaisyPatchSM Class to include USB Host handling
+
+*/
+
 using namespace daisy;
 using namespace patch_sm;
 
